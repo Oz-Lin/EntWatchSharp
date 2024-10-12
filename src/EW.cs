@@ -6,6 +6,9 @@ using EntWatchSharp.Items;
 using EntWatchSharp.Helpers;
 using EntWatchSharp.Modules.Eban;
 using EntWatchSharp.Modules;
+using CounterStrikeSharp.API.Core.Capabilities;
+using CounterStrikeSharp.API.Modules.Entities;
+using System.Numerics;
 
 namespace EntWatchSharp
 {
@@ -91,7 +94,7 @@ namespace EntWatchSharp
 		{
 			string sFileName = $"../../csgo/{Cvar.PathScheme}";
 			string sData;
-			if (File.Exists(sFileName) || File.Exists(sFileName = "../../csgo/addons/entwatch/scheme/default.json"))
+			if (File.Exists(sFileName) || File.Exists(sFileName = "../../csgo/cfg/entwatch/scheme/default.json"))
 			{
 				sData = File.ReadAllText(sFileName);
 				UI.EWSysInfo("Info.Scheme.Loading", 7, sFileName);

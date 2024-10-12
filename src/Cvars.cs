@@ -20,8 +20,8 @@ namespace EntWatchSharp
 		public FakeConVar<bool> FakeCvar_use_priority = new("ewc_use_priority", "Enable/Disable forced pressing of the button", true, flags: ConVarFlags.FCVAR_NOTIFY, new RangeValidator<bool>(false, true));
 		public FakeConVar<bool> FakeCvar_display_mapcommands = new("ewc_display_mapcommands", "Enable/Disable display of item changes", true, flags: ConVarFlags.FCVAR_NOTIFY, new RangeValidator<bool>(false, true));
 
-		public FakeConVar<string> FakeCvar_path_scheme = new("ewc_path_scheme", "Path with filename for the scheme", "addons/entwatch/scheme/default.json", flags: ConVarFlags.FCVAR_NONE);
-		public FakeConVar<string> FakeCvar_path_cfg = new("ewc_path_cfg", "Directory for configs", "addons/entwatch/maps/", flags: ConVarFlags.FCVAR_NONE);
+        public FakeConVar<string> FakeCvar_path_scheme = new("ewc_path_scheme", "Path with filename for the scheme", "cfg/entwatch/scheme/default.json", flags: ConVarFlags.FCVAR_NONE);
+        public FakeConVar<string> FakeCvar_path_cfg = new("ewc_path_cfg", "Directory for configs", "cfg/entwatch/maps/", flags: ConVarFlags.FCVAR_NONE);
 		public FakeConVar<bool> FakeCvar_lower_mapname = new("ewc_lower_mapname", "Automatically lowercase map name", false, flags: ConVarFlags.FCVAR_NONE, new RangeValidator<bool>(false, true));
 		public FakeConVar<bool> FakeCvar_triggeronce = new("ewc_triggeronce", "Exclude trigger_once from ban check", true, flags: ConVarFlags.FCVAR_NONE, new RangeValidator<bool>(false, true));
 
