@@ -1,6 +1,7 @@
 ﻿using ClientPrefsAPI;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Timers;
 using EntWatchSharp.Helpers;
 using EntWatchSharp.Modules.Eban;
@@ -16,14 +17,40 @@ namespace EntWatchSharp
 		public override string ModuleAuthor => "DarkerZ [RUS]";
 		public override string ModuleVersion => "0.DZ.4.alpha";
 
-		public override void Load(bool hotReload)
+        public override void OnAllPluginsLoaded(bool hotReload)
+        {
+
+            try
+            {
+                PluginCapability<IClientPrefsApi> Capability = new("clientprefs:api");
+                EW._CP_api = IClientPrefsApi.Capability.Get();
+            }
+            catch (Exception)
+            {
+                EW._CP_api = null;
+                Server.PrintToConsole("[EntWatch] ClientPrefs API Failed!");
+            }
+
+
+            if (EW._CP_api != null) EW.g_bAPI = true;
+
+            if (hotReload)
+            {
+                Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }).ToList().ForEach(player =>
+                {
+                    EW.LoadClientPrefs(player);
+                });
+            }
+        }
+
+        public override void Load(bool hotReload)
 		{
 			Strlocalizer = Localizer;
 
 			RegisterCVARS();
 
-			EW._CP_api = IClientPrefsApi.Capability.Get();
-			if (EW._CP_api != null) EW.g_bAPI = true;
+			//EW._CP_api = IClientPrefsApi.Capability.Get();
+			//if (EW._CP_api != null) EW.g_bAPI = true;
 
 			if (hotReload)
 			{
