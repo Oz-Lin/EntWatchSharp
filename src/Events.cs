@@ -9,6 +9,7 @@ using EntWatchSharp.Helpers;
 using CounterStrikeSharp.API.Modules.Utils;
 using EntWatchSharp.Modules.Eban;
 using EntWatchSharp.Modules;
+using EntWatchSharpAPI;
 
 namespace EntWatchSharp
 {
@@ -22,6 +23,7 @@ namespace EntWatchSharp
 			RegisterListener<OnEntitySpawned>(OnEntitySpawned_Listener);
 			RegisterListener<OnEntityDeleted>(OnEntityDeleted_Listener);
 			RegisterListener<OnTick>(OnOnTick_Listener);
+			RegisterListener<CheckTransmit>(OnCheckTransmit_Listener);
 			RegisterEventHandler<EventRoundStart>(OnEventRoundStart);
 			RegisterEventHandler<EventRoundEnd>(OnEventRoundEnd);
 			RegisterEventHandler<EventItemPickup>(OnEventItemPickupPost);
@@ -59,12 +61,11 @@ namespace EntWatchSharp
 				if (!OnButtonPressed(activator, caller)) return HookResult.Handled;
 				return HookResult.Continue;
 			});
-			//Broken after update 10/03/2024. Alternative method in OnInput(func_physbox:use)
-			/*HookEntityOutput("func_physbox", "OnPlayerUse", (_, _, activator, caller, _, _) =>
+			HookEntityOutput("func_physbox", "OnPlayerUse", (_, _, activator, caller, _, _) =>
 			{
 				if (!OnButtonPressed(activator, caller)) return HookResult.Handled;
 				return HookResult.Continue;
-			});*/
+			});
 		}
 
 		public void UnRegEvents()
@@ -75,6 +76,7 @@ namespace EntWatchSharp
 			RemoveListener<OnEntitySpawned>(OnEntitySpawned_Listener);
 			RemoveListener<OnEntityDeleted>(OnEntityDeleted_Listener);
 			RemoveListener<OnTick>(OnOnTick_Listener);
+			RemoveListener<CheckTransmit>(OnCheckTransmit_Listener);
 			DeregisterEventHandler<EventRoundStart>(OnEventRoundStart);
 			DeregisterEventHandler<EventRoundEnd>(OnEventRoundEnd);
 			DeregisterEventHandler<EventItemPickup>(OnEventItemPickupPost);
@@ -331,6 +333,24 @@ namespace EntWatchSharp
 			});
 		}
 
+		private void OnCheckTransmit_Listener(CCheckTransmitInfoList infoList)
+		{
+			if (!EW.g_CfgLoaded) return;
+#nullable enable
+			foreach ((CCheckTransmitInfo info, CCSPlayerController? player) in infoList)
+#nullable disable
+			{
+				if (player == null || !player.IsValid) continue;
+				foreach (KeyValuePair<CCSPlayerController,UHud> hud in EW.g_HudPlayer)
+				{
+					if (hud.Value is HudWorldText && ((HudWorldText)hud.Value).Entity != null && ((HudWorldText)hud.Value).Entity.IsValid && player != hud.Key)
+					{
+						info.TransmitEntities.Remove(((HudWorldText)hud.Value).Entity);
+					}
+				}
+			}
+		}
+
 		[GameEventHandler]
 		private HookResult OnEventRoundStart(EventRoundStart @event, GameEventInfo info)
 		{
@@ -352,7 +372,7 @@ namespace EntWatchSharp
 		[GameEventHandler(mode: HookMode.Post)]
 		private HookResult OnEventItemPickupPost(EventItemPickup @event, GameEventInfo info)
 		{
-			if (!EW.g_CfgLoaded) return HookResult.Continue;
+			if (!EW.g_CfgLoaded || @event.Userid == null) return HookResult.Continue;
 
 			CCSPlayerController pl = new CCSPlayerController(@event.Userid.Handle);
 
@@ -364,23 +384,27 @@ namespace EntWatchSharp
 						continue;
 					if (ownerWeapon.Value.AttributeManager.Item.ItemDefinitionIndex != @event.Defindex)
 						continue;
-					int indexItem = EW.IndexItem(ownerWeapon.Index);
-					if (indexItem > -1)
+
+					foreach (Item ItemTest in EW.g_ItemList.ToList())
 					{
-						EW.g_ItemList[indexItem].Owner = pl;
-						EW.g_ItemList[indexItem].Team = pl.TeamNum;
-						EW.g_ItemList[indexItem].SetDelay();
-						if (EW.CheckDictionary(pl, EW.g_UsePriorityPlayer)) EW.g_UsePriorityPlayer[pl].UpdateCountButton();
-						UI.EWChatActivity("Chat.Pickup", EW.g_Scheme.color_pickup, EW.g_ItemList[indexItem], EW.g_ItemList[indexItem].Owner);
-						foreach (OfflineBan OfflineTest in EW.g_OfflinePlayer.ToList())
+						if (ItemTest.thisItem(ownerWeapon.Index))
 						{
-							if (pl.UserId == OfflineTest.UserID)
+							ItemTest.Owner = pl;
+							ItemTest.Team = pl.TeamNum;
+							ItemTest.SetDelay();
+							if (EW.CheckDictionary(pl, EW.g_UsePriorityPlayer)) EW.g_UsePriorityPlayer[pl].UpdateCountButton();
+							UI.EWChatActivity("Chat.Pickup", EW.g_Scheme.color_pickup, ItemTest, ItemTest.Owner);
+							EW.g_cAPI?.OnPickUpItem(ItemTest.Name, pl);
+							foreach (OfflineBan OfflineTest in EW.g_OfflinePlayer.ToList())
 							{
-								OfflineTest.LastItem = EW.g_ItemList[indexItem].Name;
-								break;
+								if (pl.UserId == OfflineTest.UserID)
+								{
+									OfflineTest.LastItem = ItemTest.Name;
+									break;
+								}
 							}
+							return HookResult.Continue;
 						}
-						return HookResult.Continue;
 					}
 				}
 			}
@@ -393,21 +417,25 @@ namespace EntWatchSharp
 
 			try
 			{
-				var client = new CCSPlayerController(hook.GetParam<CCSPlayer_WeaponServices>(0).Pawn.Value.Controller.Value.Handle);
-				var weapon = hook.GetParam<CBasePlayerWeapon>(1);
-
-				if (EW.CheckDictionary(client, EW.g_BannedPlayer) && EW.g_BannedPlayer[client].bFixSpawnItem)
+				var service = hook.GetParam<CCSPlayer_WeaponServices>(0);
+				if (service.Pawn.Value.Controller.Value != null)
 				{
-					hook.SetReturn(false);
-					return HookResult.Handled;
-				}	
+					var client = new CCSPlayerController(service.Pawn.Value.Controller.Value.Handle);
+					var weapon = hook.GetParam<CBasePlayerWeapon>(1);
 
-				foreach(Item ItemTest in EW.g_ItemList.ToList())
-				{
-					if (ItemTest.WeaponHandle == weapon && (Cvar.BlockEPickup && (client.Buttons & PlayerButtons.Use) != 0 || (EW.CheckDictionary(client, EW.g_BannedPlayer) && EW.g_BannedPlayer[client].bBanned)))
+					if (EW.CheckDictionary(client, EW.g_BannedPlayer) && EW.g_BannedPlayer[client].bFixSpawnItem)
 					{
 						hook.SetReturn(false);
 						return HookResult.Handled;
+					}
+
+					foreach (Item ItemTest in EW.g_ItemList.ToList())
+					{
+						if (ItemTest.WeaponHandle == weapon && (Cvar.BlockEPickup && (client.Buttons & PlayerButtons.Use) != 0 || (EW.CheckDictionary(client, EW.g_BannedPlayer) && EW.g_BannedPlayer[client].bBanned)))
+						{
+							hook.SetReturn(false);
+							return HookResult.Handled;
+						}
 					}
 				}
 			}
@@ -423,26 +451,31 @@ namespace EntWatchSharp
 			try
 			{
 				//crash on hook.GetParam<CCSPlayer_WeaponServices>(0).Pawn.Value
-				var client = new CCSPlayerController(hook.GetParam<CCSPlayer_WeaponServices>(0).Pawn.Value.Controller.Value.Handle);
-				var weapon = hook.GetParam<CBasePlayerWeapon>(1);
-
-				//Before death the hook is triggered
-				Server.NextFrame(() =>
+				var service = hook.GetParam<CCSPlayer_WeaponServices>(0);
+				if (service.Pawn.Value.Controller.Value != null)
 				{
-					foreach(Item ItemTest in EW.g_ItemList.ToList())
+					var client = new CCSPlayerController(service.Pawn.Value.Controller.Value.Handle);
+					var weapon = hook.GetParam<CBasePlayerWeapon>(1);
+
+					//Before death the hook is triggered
+					Server.NextFrame(() =>
 					{
-						if (ItemTest.WeaponHandle == weapon)
+						foreach (Item ItemTest in EW.g_ItemList.ToList())
 						{
-							if (ItemTest.Owner == client)
+							if (ItemTest.WeaponHandle == weapon)
 							{
-								ItemTest.Owner = null;
-								if (EW.CheckDictionary(client, EW.g_UsePriorityPlayer)) EW.g_UsePriorityPlayer[client].UpdateCountButton();
-								UI.EWChatActivity("Chat.Drop", EW.g_Scheme.color_drop, ItemTest, client);
+								if (ItemTest.Owner == client)
+								{
+									ItemTest.Owner = null;
+									if (EW.CheckDictionary(client, EW.g_UsePriorityPlayer)) EW.g_UsePriorityPlayer[client].UpdateCountButton();
+									UI.EWChatActivity("Chat.Drop", EW.g_Scheme.color_drop, ItemTest, client);
+									EW.g_cAPI?.OnDropItem(ItemTest.Name, client);
+								}
+								return;
 							}
-							return;
 						}
-					}
-				});
+					});
+				}
 			}catch (Exception) { }
 			return HookResult.Continue;
 		}
@@ -450,7 +483,7 @@ namespace EntWatchSharp
 		[GameEventHandler(mode: HookMode.Post)]
 		private HookResult OnEventPlayerDeathPost(EventPlayerDeath @event, GameEventInfo info)
 		{
-			if (!EW.g_CfgLoaded) return HookResult.Continue;
+			if (!EW.g_CfgLoaded || @event.Userid == null) return HookResult.Continue;
 
 			CCSPlayerController pl = new CCSPlayerController(@event.Userid.Handle);
 
@@ -468,6 +501,7 @@ namespace EntWatchSharp
 						ItemTest.Owner = null;
 						if (EW.CheckDictionary(pl, EW.g_UsePriorityPlayer)) EW.g_UsePriorityPlayer[pl].UpdateCountButton();
 						UI.EWChatActivity("Chat.Death", EW.g_Scheme.color_death, ItemTest, pl);
+						EW.g_cAPI?.OnPlayerDeathWithItem(ItemTest.Name, pl);
 						if (!ItemTest.ForceDrop)
 						{
 							ItemTest.WeaponHandle.Remove();
@@ -481,6 +515,7 @@ namespace EntWatchSharp
 		[GameEventHandler]
 		private HookResult OnEventPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
 		{
+			if (@event.Userid == null) return HookResult.Continue;
 			OfflineFunc.PlayerConnectFull(@event.Userid);
 
 			if (!EW.g_CfgLoaded) return HookResult.Continue;
@@ -514,6 +549,7 @@ namespace EntWatchSharp
 		[GameEventHandler]
 		private HookResult OnEventPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
 		{
+			if (@event.Userid == null) return HookResult.Continue;
 			OfflineFunc.PlayerDisconnect(@event.Userid);
 
 			if (!EW.g_CfgLoaded) return HookResult.Continue;
@@ -533,6 +569,7 @@ namespace EntWatchSharp
 				{
 					ItemTest.Owner = null;
 					UI.EWChatActivity("Chat.Disconnect", EW.g_Scheme.color_disconnect, ItemTest, @event.Userid);
+					EW.g_cAPI?.OnPlayerDisconnectWithItem(ItemTest.Name, @event.Userid);
 					if (!ItemTest.ForceDrop)
 					{
 						ItemTest.WeaponHandle.Remove();
@@ -545,7 +582,7 @@ namespace EntWatchSharp
 		[GameEventHandler(mode: HookMode.Post)]
 		private HookResult OnEventPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
 		{
-			if (!EW.g_CfgLoaded) return HookResult.Continue;
+			if (!EW.g_CfgLoaded || @event.Userid == null) return HookResult.Continue;
 			try
 			{
 				if (@event.Userid.IsValid)
@@ -586,6 +623,7 @@ namespace EntWatchSharp
 								AbilityTest.SetFilter(activator);
 								AbilityTest.Used();
 								UI.EWChatActivity("Chat.Use", EW.g_Scheme.color_use, ItemTest, ItemTest.Owner, AbilityTest);
+								EW.g_cAPI?.OnUseItem(ItemTest.Name, ItemTest.Owner, AbilityTest.Name);
 								return true;
 							}
 							else return false;
@@ -606,10 +644,10 @@ namespace EntWatchSharp
 			var cActivator = hook.GetParam<CEntityInstance>(2);
 			var cCaller = hook.GetParam<CEntityInstance>(3);
 			//Fix func_physbox:OnPlayerUse begin
-			//if (cActivator == null || !cActivator.IsValid || !EW.IsGameUI(cCaller) || cInput.KeyValue.ToLower().CompareTo("invalue") != 0) return HookResult.Continue;
-			if (cActivator == null || !cActivator.IsValid) return HookResult.Continue;
-			if (cEntity != null && cEntity.DesignerName.CompareTo("func_physbox") == 0)
+			/*if (cActivator == null || !cActivator.IsValid) return HookResult.Continue;
+			if (cEntity?.DesignerName.CompareTo("func_physbox") == 0)
 			{
+				Console.WriteLine($"Input: cEntity - {cEntity.DesignerName} cInput - {cInput.KeyValue}");
 				if(cInput.KeyValue.ToLower().CompareTo("use") == 0)
 				{
 					if (!OnButtonPressed(cActivator, cEntity.EntityInstance)) return HookResult.Handled;
@@ -617,8 +655,9 @@ namespace EntWatchSharp
 				}
 				return HookResult.Continue;
 			}
-			if (!EW.IsGameUI(cCaller) || cInput.KeyValue.ToLower().CompareTo("invalue") != 0) return HookResult.Continue;
+			if (!EW.IsGameUI(cCaller) || cInput.KeyValue.ToLower().CompareTo("invalue") != 0) return HookResult.Continue;*/
 			//Fix func_physbox:OnPlayerUse end
+			if (cActivator == null || !cActivator.IsValid || !EW.IsGameUI(cCaller) || cInput.KeyValue.ToLower().CompareTo("invalue") != 0) return HookResult.Continue;
 			var cValue = new CUtlSymbolLarge(hook.GetParam<CVariant>(4).Handle);
 
 			EW.UpdateTime();
@@ -635,6 +674,7 @@ namespace EntWatchSharp
 								AbilityTest.SetFilter(cActivator);
 								AbilityTest.Used();
 								UI.EWChatActivity("Chat.Use", EW.g_Scheme.color_use, ItemTest, ItemTest.Owner, AbilityTest);
+								EW.g_cAPI?.OnUseItem(ItemTest.Name, ItemTest.Owner, AbilityTest.Name);
 								return HookResult.Continue;
 							} else return HookResult.Handled;
 						}
@@ -643,7 +683,21 @@ namespace EntWatchSharp
 			}
 			return HookResult.Continue;
 		}
-
+#nullable enable
+		public CCSPlayerController? EntityIsPlayer(CEntityInstance? entity)
+#nullable disable
+		{
+			if (entity != null && entity.IsValid && entity.DesignerName.CompareTo("player") == 0)
+			{
+				var pawn = new CCSPlayerPawn(entity.Handle);
+				if (pawn.Controller.Value != null && pawn.Controller.Value.IsValid)
+				{
+					var player = new CCSPlayerController(pawn.Controller.Value.Handle);
+					if (player != null && player.IsValid) return player;
+				}
+			}
+			return null;
+		}
 		private HookResult OnTriggerStartTouch(DynamicHook hook)
 		{
 			if (!EW.g_CfgLoaded) return HookResult.Continue;

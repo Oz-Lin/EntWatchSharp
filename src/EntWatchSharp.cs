@@ -1,76 +1,91 @@
 ﻿using ClientPrefsAPI;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Timers;
 using EntWatchSharp.Helpers;
 using EntWatchSharp.Modules.Eban;
+using EntWatchSharpAPI;
 using Microsoft.Extensions.Localization;
 
 namespace EntWatchSharp
 {
-    public partial class EntWatchSharp : BasePlugin
+	[MinimumApiVersion(285)]
+	public partial class EntWatchSharp : BasePlugin
 	{
-		public static IStringLocalizer? Strlocalizer;
+		public static IStringLocalizer Strlocalizer;
 		public override string ModuleName => "EntWatchSharp";
 		public override string ModuleDescription => "Notify players about entity interactions";
 		public override string ModuleAuthor => "DarkerZ [RUS]";
-		public override string ModuleVersion => "0.DZ.4.alpha";
+		public override string ModuleVersion => "0.DZ.9.beta";
 
-        public override void OnAllPluginsLoaded(bool hotReload)
-        {
+		public override void OnAllPluginsLoaded(bool hotReload)
+		{
+			try
+			{
+				PluginCapability<IClientPrefsAPI> CapabilityCP = new("clientprefs:api");
+				EW._CP_api = IClientPrefsAPI.Capability.Get();
+			}
+			catch (Exception)
+			{
+				EW._CP_api = null;
+				UI.EWSysInfo("Info.Error", 15, "ClientPrefs API Failed!");
+			}
 
-            try
-            {
-                PluginCapability<IClientPrefsApi> Capability = new("clientprefs:api");
-                EW._CP_api = IClientPrefsApi.Capability.Get();
-            }
-            catch (Exception)
-            {
-                EW._CP_api = null;
-                Server.PrintToConsole("[EntWatch] ClientPrefs API Failed!");
-            }
+			try
+			{
+				PluginCapability<IEntWatchSharpAPI> CapabilityEW = new("entwatch:api");
+				EW._EW_api = IEntWatchSharpAPI.Capability.Get();
+			}
+			catch (Exception)
+			{
+				EW._EW_api = null;
+				UI.EWSysInfo("Info.Error", 15, "EntWatch API Failed!");
+			}
 
+			if (hotReload)
+			{
+				Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }).ToList().ForEach(player =>
+				{
+					EW.LoadClientPrefs(player);
+				});
+			}
+		}
 
-            if (EW._CP_api != null) EW.g_bAPI = true;
-
-            if (hotReload)
-            {
-                Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }).ToList().ForEach(player =>
-                {
-                    EW.LoadClientPrefs(player);
-                });
-            }
-        }
-
-        public override void Load(bool hotReload)
+		public override void Load(bool hotReload)
 		{
 			Strlocalizer = Localizer;
 
 			RegisterCVARS();
 
-			//EW._CP_api = IClientPrefsApi.Capability.Get();
-			//if (EW._CP_api != null) EW.g_bAPI = true;
+			try
+			{
+				EW.g_cAPI = new EWAPI();
+				Capabilities.RegisterPluginCapability(IEntWatchSharpAPI.Capability, () => EW.g_cAPI);
+			}
+			catch (Exception)
+			{
+				EW.g_cAPI = null;
+				UI.EWSysInfo("Info.Error", 15, "EntWatch API Register Failed!");
+			}
 
 			if (hotReload)
 			{
 				EW.LoadScheme();
 				EW.LoadConfig();
 				EW.g_Timer = new CounterStrikeSharp.API.Modules.Timers.Timer(1.0f, TimerUpdate, TimerFlags.REPEAT);
-				Utilities.GetPlayers().ForEach(player =>
+				Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }).ToList().ForEach(player =>
 				{
-					if (player.IsValid)
-					{
-						EW.CheckDictionary(player, EW.g_HudPlayer);
+					EW.CheckDictionary(player, EW.g_HudPlayer);
 
-						EW.CheckDictionary(player, EW.g_UsePriorityPlayer);
+					EW.CheckDictionary(player, EW.g_UsePriorityPlayer);
 
-						EW.LoadClientPrefs(player);
+					//EW.LoadClientPrefs(player);
 
-						EW.CheckDictionary(player, EW.g_BannedPlayer);
+					EW.CheckDictionary(player, EW.g_BannedPlayer);
 
-						OfflineFunc.PlayerConnectFull(player);
-					}
+					OfflineFunc.PlayerConnectFull(player);
 				});
 				EW.g_TimerRetryDB = new CounterStrikeSharp.API.Modules.Timers.Timer(1.0f, TimerRetry, TimerFlags.REPEAT);
 			}

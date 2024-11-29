@@ -16,25 +16,38 @@ namespace EntWatchSharp
 		void UnRegCommands()
 		{
 			RemoveCommand("ew_reload", OnEWReload);
+			RemoveCommand("css_ereload", OnEWReload);
 			RemoveCommand("ew_showitems", OnEWShow);
+			RemoveCommand("css_eshowitems", OnEWShow);
 			RemoveCommand("ew_showscheme", OnEWScheme);
+			RemoveCommand("css_eshowscheme", OnEWScheme);
 			RemoveCommand("ehud", OnEWChangeHud);
 			RemoveCommand("ehud_pos", OnEWChangeHudPos);
 			RemoveCommand("ehud_refresh", OnEWChangeHudRefresh);
 			RemoveCommand("ehud_sheet", OnEWChangeHudSheet);
 			RemoveCommand("eup", OnEWChangeUsePriority);
 			RemoveCommand("ew_ban", OnEWBan);
+			RemoveCommand("css_eban", OnEWBan);
 			RemoveCommand("ew_unban", OnEWUnBan);
+			RemoveCommand("css_eunban", OnEWUnBan);
 			RemoveCommand("ew_status", OnEWStatus);
+			RemoveCommand("css_estatus", OnEWStatus);
 			RemoveCommand("ew_banlist", OnEWBanList);
+			RemoveCommand("css_ebanlist", OnEWBanList);
 			RemoveCommand("ew_transfer", OnEWTransfer);
+			RemoveCommand("css_etransfer", OnEWTransfer);
 			RemoveCommand("ew_spawn", OnEWSpawn);
+			RemoveCommand("css_espawn", OnEWSpawn);
 			RemoveCommand("ew_list", OnEWList);
+			RemoveCommand("css_elist", OnEWList);
 		}
 
 		[ConsoleCommand("ew_reload", "Reloads config and Scheme")]
+		[ConsoleCommand("css_ereload", "Reloads config and Scheme")]
 		[RequiresPermissions("@css/ew_reload")]
+#nullable enable
 		public void OnEWReload(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
 			if (player != null && !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -45,8 +58,11 @@ namespace EntWatchSharp
 		}
 
 		[ConsoleCommand("ew_showitems", "Shows a list of spawned items")]
+		[ConsoleCommand("css_eshowitems", "Shows a list of spawned items")]
 		[RequiresPermissions("@css/ew_reload")]
+#nullable enable
 		public void OnEWShow(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
 			if (player != null && !player.IsValid) return;
 			if (!EW.g_CfgLoaded) return;
@@ -71,8 +87,11 @@ namespace EntWatchSharp
 			}
 		}
 		[ConsoleCommand("ew_showscheme", "Shows the scheme")]
+		[ConsoleCommand("css_eshowscheme", "Shows the scheme")]
 		[RequiresPermissions("@css/ew_reload")]
+#nullable enable
 		public void OnEWScheme(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
 			if (player != null && !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -92,9 +111,11 @@ namespace EntWatchSharp
 
 		[ConsoleCommand("ehud", "Allows the player to switch the HUD")]
 		[CommandHelper(minArgs: 1, usage: "[number]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+#nullable enable
 		public async void OnEWChangeHud(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
-			if (!EW.g_bAPI || player == null || !player.IsValid) return;
+			if (EW._CP_api == null || player == null || !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
 			if (!EW.CheckDictionary(player,EW.g_HudPlayer))
 			{
@@ -128,9 +149,11 @@ namespace EntWatchSharp
 
 		[ConsoleCommand("ehud_pos", "Allows the player to change the position of the HUD")]
 		[CommandHelper(minArgs: 3, usage: "[X Y Z] (default: 50 50 50; min -200.0; max 200.0)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+#nullable enable
 		public async void OnEWChangeHudPos(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
-			if (!EW.g_bAPI || player == null || !player.IsValid) return;
+			if (EW._CP_api == null || player == null || !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
 			if (!EW.CheckDictionary(player, EW.g_HudPlayer))
 			{
@@ -163,9 +186,11 @@ namespace EntWatchSharp
 
 		[ConsoleCommand("ehud_refresh", "Allows the player to change the time it takes to scroll through the list")]
 		[CommandHelper(minArgs: 1, usage: "[sec] (default: 3; min 1; max 10)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+#nullable enable
 		public async void OnEWChangeHudRefresh(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
-			if (!EW.g_bAPI || player == null || !player.IsValid) return;
+			if (EW._CP_api == null || player == null || !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
 			if (!EW.CheckDictionary(player, EW.g_HudPlayer))
 			{
@@ -188,9 +213,11 @@ namespace EntWatchSharp
 
 		[ConsoleCommand("ehud_sheet", "Allows the player to change the number of items on the sheet")]
 		[CommandHelper(minArgs: 1, usage: "[count] (default: 5; min 1; max 15)", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+#nullable enable
 		public async void OnEWChangeHudSheet(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
-			if (!EW.g_bAPI || player == null || !player.IsValid) return;
+			if (EW._CP_api == null || player == null || !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
 			if (!EW.CheckDictionary(player, EW.g_HudPlayer))
 			{
@@ -214,9 +241,11 @@ namespace EntWatchSharp
 
 		[ConsoleCommand("eup", "Allows the player to use UsePriority")]
 		[CommandHelper(minArgs: 0, usage: "[bool]", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+#nullable enable
 		public async void OnEWChangeUsePriority(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
-			if (!EW.g_bAPI || player == null || !player.IsValid) return;
+			if (EW._CP_api == null || player == null || !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
 			if (!EW.CheckDictionary(player, EW.g_UsePriorityPlayer))
 			{
@@ -251,9 +280,12 @@ namespace EntWatchSharp
 
 		//Eban Start
 		[ConsoleCommand("ew_ban", "Allows the admin to restrict items for the player")]
+		[ConsoleCommand("css_eban", "Allows the admin to restrict items for the player")]
 		[RequiresPermissions("@css/ew_ban")]
-		[CommandHelper(minArgs: 1, usage: "<#userid|name> [<time>] [<reason>]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+		[CommandHelper(minArgs: 1, usage: "<#userid|name|#steamid> [<time>] [<reason>]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+#nullable enable
 		public void OnEWBan(CCSPlayerController? admin, CommandInfo command)
+#nullable disable
 		{
 			if (admin != null && !admin.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -354,9 +386,12 @@ namespace EntWatchSharp
 		}
 
 		[ConsoleCommand("ew_unban", "Allows the admin to remove the item restriction for a player")]
+		[ConsoleCommand("css_eunban", "Allows the admin to remove the item restriction for a player")]
 		[RequiresPermissions("@css/ew_unban")]
-		[CommandHelper(minArgs: 1, usage: "<#userid|name> [<reason>]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+		[CommandHelper(minArgs: 1, usage: "<#userid|name|#steamid> [<reason>]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+#nullable enable
 		public void OnEWUnBan(CCSPlayerController? admin, CommandInfo command)
+#nullable disable
 		{
 			if (admin != null && !admin.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -396,9 +431,9 @@ namespace EntWatchSharp
 
 			Server.NextFrame(async () =>
 			{
-				if (!bOnline && sTarget.ToLower().StartsWith("steam_"))
+				if (!bOnline && sTarget.ToLower().StartsWith("#steam_"))
 				{
-					target = await EbanDB.GetBan(sTarget, EW.g_Scheme.server_name);
+					target = await EbanDB.GetBan(sTarget.Substring(1), EW.g_Scheme.server_name);
 				}
 
 				if (target == null)
@@ -454,8 +489,11 @@ namespace EntWatchSharp
 		}
 
 		[ConsoleCommand("ew_status", "Allows the player to view the restrictions")]
+		[ConsoleCommand("css_estatus", "Allows the player to view the restrictions")]
 		[CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_ONLY)]
+#nullable enable
 		public void OnEWStatus(CCSPlayerController? player, CommandInfo command)
+#nullable disable
 		{
 			if (player != null && !player.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -469,7 +507,7 @@ namespace EntWatchSharp
 
 				target = players.Single();
 			}
-			if (!EW.CheckDictionary(target, EW.g_BannedPlayer))
+			if (target == null || !EW.CheckDictionary(target, EW.g_BannedPlayer))
 			{
 				UI.EWReplyInfo(player, "Info.Error", bConsole, "Player not found in dictionary");
 				return;
@@ -496,9 +534,12 @@ namespace EntWatchSharp
 			}
 		}
 		[ConsoleCommand("ew_banlist", "Displays a list of restrictions")]
+		[ConsoleCommand("css_ebanlist", "Displays a list of restrictions")]
 		[RequiresPermissions("@css/ew_ban")]
 		[CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+#nullable enable
 		public void OnEWBanList(CCSPlayerController? admin, CommandInfo command)
+#nullable disable
 		{
 			if (admin != null && !admin.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -530,9 +571,12 @@ namespace EntWatchSharp
 		//Eban End
 
 		[ConsoleCommand("ew_transfer", "Allows the admin to transfer items")]
+		[ConsoleCommand("css_etransfer", "Allows the admin to transfer items")]
 		[RequiresPermissions("@css/ew_transfer")]
 		[CommandHelper(minArgs: 2, usage: "<owner>/$<itemname> <receiver>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+#nullable enable
 		public void OnEWTransfer(CCSPlayerController? admin, CommandInfo command)
+#nullable disable
 		{
 			if (admin != null && !admin.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -612,9 +656,12 @@ namespace EntWatchSharp
 		}
 
 		[ConsoleCommand("ew_spawn", "Allows the admin to spawn items")]
+		[ConsoleCommand("css_espawn", "Allows the admin to spawn items")]
 		[RequiresPermissions("@css/ew_spawn")]
 		[CommandHelper(minArgs: 2, usage: "<itemname> <receiver> [<strip>]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+#nullable enable
 		public void OnEWSpawn(CCSPlayerController? admin, CommandInfo command)
+#nullable disable
 		{
 			if (admin != null && !admin.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;
@@ -651,9 +698,12 @@ namespace EntWatchSharp
 		}
 
 		[ConsoleCommand("ew_list", "Shows a list of players including those who have disconnected")]
+		[ConsoleCommand("css_elist", "Shows a list of players including those who have disconnected")]
 		[RequiresPermissions("@css/ew_ban")]
 		[CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+#nullable enable
 		public void OnEWList(CCSPlayerController? admin, CommandInfo command)
+#nullable disable
 		{
 			if (admin != null && !admin.IsValid) return;
 			bool bConsole = command.CallingContext == CommandCallingContext.Console;

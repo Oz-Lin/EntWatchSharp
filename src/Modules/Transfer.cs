@@ -1,4 +1,5 @@
 ﻿using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Entities;
 using EntWatchSharp.Helpers;
 using EntWatchSharp.Items;
 
@@ -25,6 +26,11 @@ namespace EntWatchSharp.Modules
 
 		public static void ItemName(CCSPlayerController admin, Item ItemTest, CCSPlayerController receiver, bool bConsole, bool recurse = true)
 		{
+			if (receiver.Pawn.Value == null || !receiver.Pawn.Value.IsValid || receiver.Pawn.Value.AbsOrigin == null)
+			{
+				UI.EWReplyInfo(admin, "Reply.No_matching_client", bConsole);
+				return;
+			}
 			if (ItemTest.AllowTransfer != true)
 			{
 				UI.EWReplyInfo(admin, "Reply.Transfer.NotAllow", bConsole);
@@ -35,7 +41,7 @@ namespace EntWatchSharp.Modules
 			{
 				if (!weapon.IsValid) continue;
 
-				if (new CCSWeaponBaseVData(weapon.Value!.VData.Handle)!.GearSlot == ItemTest.WeaponHandle.VData!.GearSlot)
+				if (new CCSWeaponBaseVData(weapon.Value!.VData!.Handle)!.GearSlot == ItemTest.WeaponHandle.VData!.GearSlot)
 				{
 					CCSWeaponBase CheckWeapon = new CCSWeaponBase(weapon.Value.Handle);
 					if (CheckWeapon.IsValid)
@@ -63,7 +69,7 @@ namespace EntWatchSharp.Modules
 				{
 					if (!weapon.IsValid) continue;
 
-					if (new CCSWeaponBaseVData(weapon.Value!.VData.Handle)!.GearSlot == ItemTest.WeaponHandle.VData!.GearSlot)
+					if (new CCSWeaponBaseVData(weapon.Value!.VData!.Handle)!.GearSlot == ItemTest.WeaponHandle.VData!.GearSlot)
 					{
 						target.PlayerPawn.Value.WeaponServices.ActiveWeapon.Raw = weapon.Raw;
 						target.DropActiveWeapon();
@@ -83,6 +89,7 @@ namespace EntWatchSharp.Modules
 			ItemTest.WeaponHandle.Teleport(receiver.Pawn.Value.AbsOrigin, null, null);
 
 			UI.EWChatAdmin("Reply.Transfer.Notify", $"{UI.PlayerInfo(admin)}{EW.g_Scheme.color_warning}", $"{ItemTest.Color}{ItemTest.Name}{EW.g_Scheme.color_warning}", $"{(target != null ? UI.PlayerInfo(target) : $"{EW.g_Scheme.color_name}Server{EW.g_Scheme.color_warning}")}{EW.g_Scheme.color_warning}", $"{UI.PlayerInfo(receiver)}");
+			EW.g_cAPI?.OnAdminTransferedItem(admin, ItemTest.Name, receiver);
 		}
 	}
 }

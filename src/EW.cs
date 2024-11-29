@@ -6,6 +6,7 @@ using EntWatchSharp.Items;
 using EntWatchSharp.Helpers;
 using EntWatchSharp.Modules.Eban;
 using EntWatchSharp.Modules;
+using EntWatchSharpAPI;
 using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Entities;
 using System.Numerics;
@@ -20,8 +21,10 @@ namespace EntWatchSharp
 		public static Scheme g_Scheme = new Scheme();
 		public static bool g_CfgLoaded = false;
 		
-		public static bool g_bAPI = false;
-		public static IClientPrefsApi? _CP_api;
+		public static IClientPrefsAPI _CP_api;
+
+		public static IEntWatchSharpAPI _EW_api;
+		public static EWAPI g_cAPI = null;
 
 		public static Dictionary<CCSPlayerController, EbanPlayer> g_BannedPlayer = new Dictionary<CCSPlayerController, EbanPlayer>();
 		public static Dictionary<CCSPlayerController, UHud> g_HudPlayer = new Dictionary<CCSPlayerController, UHud>();
@@ -128,7 +131,9 @@ namespace EntWatchSharp
 			return false;
 		}
 
+#nullable enable
 		public static CEntityInstance? EntityParentRecursive(CEntityInstance entity)
+#nullable disable
 		{
 			if (entity == null || !entity.IsValid) return null;
 
@@ -136,11 +141,13 @@ namespace EntWatchSharp
 
 			var baseentity = new CBaseEntity(entity.Handle);
 			if (baseentity == null || !baseentity.IsValid) return null;
+#nullable enable
 			CEntityInstance? Owner = baseentity.CBodyComponent?.SceneNode?.PParent?.Owner;
+#nullable disable
 			if (Owner == null || !Owner.IsValid) return null;
 			if (Owner.Entity != null && Owner.Entity.Name != null && Owner.Entity.Name.CompareTo("") != 0)
 			{
-				var ownerentity = baseentity.CBodyComponent.SceneNode.PParent.Owner;
+				var ownerentity = baseentity.CBodyComponent?.SceneNode?.PParent?.Owner;
 				if (ownerentity == null || !ownerentity.IsValid) return null;
 				return EntityParentRecursive(ownerentity);
 			}
@@ -161,10 +168,10 @@ namespace EntWatchSharp
 		{
 			try
 			{
-				string sHUDType = g_bAPI ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Type") : "3";
-				string sHUDPos = g_bAPI ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Pos") : "50_50_50";
-				string sHUDRefresh = g_bAPI ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Refresh") : "3";
-				string sHUDSheet = g_bAPI ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Sheet") : "5";
+				string sHUDType = _CP_api != null ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Type") : "3";
+				string sHUDPos = _CP_api != null ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Pos") : "50_50_50";
+				string sHUDRefresh = _CP_api != null ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Refresh") : "3";
+				string sHUDSheet = _CP_api != null ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_HUD_Sheet") : "5";
 				if (player.IsValid && CheckDictionary(player, g_HudPlayer))
 				{
 					if (!string.IsNullOrEmpty(sHUDPos))
@@ -198,7 +205,7 @@ namespace EntWatchSharp
 						if (Int32.TryParse(sHUDSheet, out number)) g_HudPlayer[player].iSheetMax = number;
 					}
 				}
-				string sUsePriority = g_bAPI ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_Use_Priority") : "1";
+				string sUsePriority = _CP_api != null ? await _CP_api.GetClientCookie(player.SteamID.ToString(), "EW_Use_Priority") : "1";
 				if (player.IsValid && CheckDictionary(player, g_UsePriorityPlayer))
 				{
 					if (!string.IsNullOrEmpty(sUsePriority)) g_UsePriorityPlayer[player].Activate = sUsePriority.CompareTo("0") != 0;
@@ -207,7 +214,7 @@ namespace EntWatchSharp
 			}catch (Exception ex) { Console.WriteLine(ex); }
 		}
 
-		public static void RemoveEntityHud(CCSPlayerController? player)
+		public static void RemoveEntityHud(CCSPlayerController player)
 		{
 			var plHud = g_HudPlayer[player];
 			if (plHud is HudWorldText && ((HudWorldText)plHud).Entity != null)
@@ -221,7 +228,7 @@ namespace EntWatchSharp
 			}
 		}
 
-		public static void SwitchHud(CCSPlayerController? player, int number)
+		public static void SwitchHud(CCSPlayerController player, int number)
 		{
 			Server.NextFrame(() =>
 			{
@@ -274,7 +281,7 @@ namespace EntWatchSharp
 			{
 				var authServer = (communityId - 76561197960265728) % 2;
 				var authId = (communityId - 76561197960265728 - authServer) / 2;
-				return $"STEAM_1:{authServer}:{authId}";
+				return $"STEAM_0:{authServer}:{authId}";
 			}
 			return null;
 		}
